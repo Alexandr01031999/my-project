@@ -1,4 +1,3 @@
-python
 """
 Модуль для работы с маскировкой банковских карт и счетов, а также форматированием дат.
 """
@@ -6,91 +5,70 @@ python
 from datetime import datetime
 
 
+def mask_account_card(account_card: str) -> str:
+    """Маскирует номер карты или счета в строке."""
+    # Разделяем строку на части
+    parts = account_card.split()
+
+    # Проверяем, что есть хотя бы одна часть
+    if not parts:
+        return account_card
+
+    # Последняя часть - это номер
+    number = parts[-1]
+
+    # Проверяем, что номер состоит только из цифр
+    if not number.isdigit():
+        return account_card
+
+    # Определяем тип по количеству цифр
+    if len(number) == 16:
+        # Это номер карты
+        masked_number = get_mask_card_number(number)
+    elif len(number) == 20:
+        # Это номер счета
+        masked_number = get_mask_account(number)
+    else:
+        # Неизвестный формат
+        return account_card
+
+    # Собираем строку обратно
+    return " ".join(parts[:-1] + [masked_number])
+
+
 def get_mask_card_number(card_number: str) -> str:
-    """
-    Маскирует номер карты в формате XXXX XX** **** XXXX.
+    """Маскирует номер банковской карты."""
+    if len(card_number) != 16:
+        raise ValueError("Номер карты должен содержать ровно 16 цифр")
+    if not card_number.isdigit():
+        raise ValueError("Номер карты должен содержать только цифры")
 
-    Args:
-        card_number: Номер карты в виде строки (16 цифр)
-
-    Returns:
-        Замаскированный номер карты
-    """
-    if len(card_number) != 16 or not card_number.isdigit():
-        return card_number
-
-    return f"{card_number[:4]} {card_number[4:6]}** **** {card_number[-4:]}"
+    first_six = card_number[:6]
+    last_four = card_number[-4:]
+    masked = f"{first_six[:4]} {first_six[4:6]}** **** {last_four}"
+    return masked
 
 
 def get_mask_account(account_number: str) -> str:
-    """
-    Маскирует номер счета в формате **XXXX.
-
-    Args:
-        account_number: Номер счета в виде строки
-
-    Returns:
-        Замаскированный номер счета
-    """
-    if len(account_number) < 4:
-        return account_number
+    """Маскирует номер банковского счета."""
+    if len(account_number) != 20:
+        raise ValueError("Номер счета должен содержать ровно 20 цифр")
+    if not account_number.isdigit():
+        raise ValueError("Номер счета должен содержать только цифры")
 
     return f"**{account_number[-4:]}"
 
 
-def mask_account_card(account_info: str) -> str:
-    """
-    Маскирует номер карты или счета в зависимости от типа.
-
-    Args:
-        account_info: Строка с типом и номером карты/счета
-
-    Returns:
-        Строка с замаскированным номером
-
-    Examples:
-        >>> mask_account_card("Visa Platinum 7000792289606361")
-        'Visa Platinum 7000 79** **** 6361'
-        >>> mask_account_card("Счет 73654108430135874305")
-        'Счет **4305'
-    """
-    # Разделяем строку на части
-    parts = account_info.rsplit(' ', 1)
-
-    if len(parts) != 2:
-        # Если ввод не корректный (нет номера или более 2 подстрок)
-        return account_info
-
-    name, number = parts[0], parts[1]
-
-    # Проверяем, является ли строка номером счета
-    if name.lower() == "счет":
-        masked_number = get_mask_account(number)
-    else:
-        # Для всех карт используем маскировку карты
-        masked_number = get_mask_card_number(number)
-
-    return f"{name} {masked_number}"
-
-
 def get_date(date_string: str) -> str:
-    """
-    Преобразует дату из ISO формата в формат ДД.ММ.ГГГГ.
-
-    Args:
-        date_string: Строка с датой в формате ISO (например, "2024-03-11T02:26:18.671407")
-
-    Returns:
-        Строка с датой в формате "ДД.ММ.ГГГГ"
-
-    Examples:
-        >>> get_date("2024-03-11T02:26:18.671407")
-        '11.03.2024'
-    """
+    """Преобразует строку с датой в формат ДД.ММ.ГГГГ."""
+    # Ожидаемый формат: "2024-03-11T18:35:31.123456"
     try:
-        # Парсим ISO строку
-        dt = datetime.fromisoformat(date_string)
-        return dt.strftime("%d.%m.%Y")
-    except ValueError:
-        # Если строка не является корректным ISO форматом
+        # Разбиваем по T и берем первую часть (дата)
+        date_part = date_string.split("T")[0]
+        # Разбиваем дату по "-"
+        year, month, day = date_part.split("-")
+        # Возвращаем в формате ДД.ММ.ГГГГ
+        return f"{day}.{month}.{year}"
+    except (IndexError, ValueError, AttributeError):
+        # Если формат не подходит, возвращаем исходную строку
         return date_string

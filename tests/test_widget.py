@@ -2,6 +2,12 @@
 Тесты для модуля widget
 """
 
+import sys
+import os
+
+# Добавляем путь к корневой папке проекта
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from src.widget import mask_account_card, get_date
 
 
@@ -24,7 +30,7 @@ def test_mask_account_card():
     assert mask_account_card("Неверный формат") == "Неверный формат"
     assert mask_account_card("Счет 123 456") == "Счет 123 456"
 
-    print("Все тесты mask_account_card пройдены!")
+    print("✅ Все тесты mask_account_card пройдены!")
 
 
 def test_get_date():
@@ -33,9 +39,10 @@ def test_get_date():
     assert get_date("2023-12-25T15:30:00") == "25.12.2023"
     assert get_date("2022-01-01T00:00:00.000000") == "01.01.2022"
 
-    print("Все тесты get_date пройдены!")
+    print("✅ Все тесты get_date пройдены!")
 
 
 if __name__ == "__main__":
     test_mask_account_card()
     test_get_date()
+    print("\n🎉 Все тесты успешно пройдены!")

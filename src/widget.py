@@ -35,4 +35,4 @@ def get_date(date_string: str) -> str:
         year, month, day = date_part.split("-")
         return f"{day}.{month}.{year}"
     except (IndexError, ValueError, AttributeError):
-        return date_string
+        return date_stringaaa

@@ -3,7 +3,7 @@
 Содержит функции для фильтрации по статусу и сортировки по дате.
 """
 
-from typing import List, Dict, Optional
+from typing import List, Dict
 
 
 def filter_by_state(data: List[Dict[str, str | int]], state: str = 'EXECUTED') -> List[Dict[str, str | int]]:

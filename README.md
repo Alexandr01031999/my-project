@@ -27,7 +27,6 @@ pip install -r requirements.txt
 ```
 python widget.py
 ```
-2. Следуйте инструкции
 
 ## Документация:
 

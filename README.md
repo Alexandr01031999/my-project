@@ -32,10 +32,14 @@ python widget.py
 
 ## Запуск тестов
 
-Для запуска всех тестов используйте команду:
-```
-pytest
-```
+# Установить зависимости
+pip install -r requirements-dev.txt
+
+# Запустить все тесты
+pytest -v
+
+# Запустить с покрытием
+pytest --cov=src --cov-report=html
 
 ## Документация:
 

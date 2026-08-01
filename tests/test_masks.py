@@ -1,63 +1,80 @@
-"""Тесты для модуля masks."""
+import pytest
 
 from src.masks import get_mask_account, get_mask_card_number
 
 
-def test_get_mask_card_number() -> None:
-    """Тестирует функцию маскировки номера карты."""
-    assert get_mask_card_number("7000792289606361") == "7000 79** **** 6361"
-    assert get_mask_card_number("1234567890123456") == "1234 56** **** 3456"
-    print("✅ Тест маскировки карты пройден")
+class TestGetMaskCardNumber:
+    """Тесты для функции маскировки номера карты"""
+
+    @pytest.mark.parametrize(
+        "card_number, expected",
+        [
+            ("1234567890123456", "1234 56** **** 3456"),
+            ("0000111122223333", "0000 11** **** 3333"),
+            ("9999999999999999", "9999 99** **** 9999"),
+        ],
+    )
+    def test_valid_card_numbers(self, card_number, expected):
+        """Тест корректной маскировки валидных номеров карт"""
+        assert get_mask_card_number(card_number) == expected
+
+    @pytest.mark.parametrize(
+        "card_number",
+        [
+            "",
+            "123",
+            "12345678901234567",
+            "1234567890123456789",
+        ],
+    )
+    def test_invalid_card_numbers(self, card_number):
+        """Тест обработки невалидных номеров карт"""
+        with pytest.raises(ValueError):
+            get_mask_card_number(card_number)
+
+    def test_card_number_with_spaces(self):
+        """Тест маскировки номера карты с пробелами"""
+        assert get_mask_card_number("1234 5678 9012 3456") == "1234 56** **** 3456"
+
+    def test_card_number_with_dashes(self):
+        """Тест маскировки номера карты с дефисами"""
+        assert get_mask_card_number("1234-5678-9012-3456") == "1234 56** **** 3456"
 
 
-def test_get_mask_account() -> None:
-    """Тестирует функцию маскировки номера счета."""
-    assert get_mask_account("73654108430135874305") == "**4305"
-    assert get_mask_account("1234567890") == "**7890"
-    print("✅ Тест маскировки счета пройден")
+class TestGetMaskAccount:
+    """Тесты для функции маскировки номера счета"""
 
+    @pytest.mark.parametrize(
+        "account_number, expected",
+        [
+            ("12345678901234567890", "**7890"),
+            ("98765432109876543210", "**3210"),
+            ("1234567890", "**7890"),
+            ("11111111111111111111", "**1111"),
+        ],
+    )
+    def test_valid_account_numbers(self, account_number, expected):
+        """Тест корректной маскировки валидных номеров счетов"""
+        assert get_mask_account(account_number) == expected
 
-def test_get_mask_card_number_errors() -> None:
-    """Тестирует обработку ошибок для номера карты."""
-    # Короткий номер
-    try:
-        get_mask_card_number("123")
-        print("❌ Ошибка: должна быть ошибка для короткого номера")
-    except ValueError as e:
-        assert str(e) == "Номер карты должен содержать ровно 16 цифр"
-        print("✅ Тест обработки ошибки (короткий номер) пройден")
+    @pytest.mark.parametrize(
+        "account_number",
+        [
+            "",
+            "123",
+            "12",
+            "1",
+        ],
+    )
+    def test_short_account_numbers(self, account_number):
+        """Тест обработки слишком коротких номеров счетов"""
+        with pytest.raises(ValueError):
+            get_mask_account(account_number)
 
-    # Нецифровой номер
-    try:
-        get_mask_card_number("123456789012345a")
-        print("❌ Ошибка: должна быть ошибка для нецифрового номера")
-    except ValueError as e:
-        assert str(e) == "Номер карты должен содержать только цифры"
-        print("✅ Тест обработки ошибки (нецифровой номер) пройден")
+    def test_account_with_spaces(self):
+        """Тест маскировки номера счета с пробелами"""
+        assert get_mask_account("1234 5678 9012 3456 7890") == "**7890"
 
-
-def test_get_mask_account_errors() -> None:
-    """Тестирует обработку ошибок для номера счета."""
-    # Короткий счет
-    try:
-        get_mask_account("123")
-        print("❌ Ошибка: должна быть ошибка для короткого счета")
-    except ValueError as e:
-        assert str(e) == "Номер счета должен содержать минимум 4 цифры"  # Исправлено!
-        print("✅ Тест обработки ошибки (короткий счет) пройден")
-
-    # Нецифровой счет
-    try:
-        get_mask_account("12345a67890")
-        print("❌ Ошибка: должна быть ошибка для нецифрового счета")
-    except ValueError as e:
-        assert str(e) == "Номер счета должен содержать только цифры"
-        print("✅ Тест обработки ошибки (нецифровой счет) пройден")
-
-
-if __name__ == "__main__":
-    test_get_mask_card_number()
-    test_get_mask_account()
-    test_get_mask_card_number_errors()
-    test_get_mask_account_errors()
-    print("\n✅ Все тесты пройдены успешно!")
+    def test_account_with_dashes(self):
+        """Тест маскировки номера счета с дефисами"""
+        assert get_mask_account("1234-5678-9012-3456-7890") == "**7890"

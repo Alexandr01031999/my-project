@@ -1,60 +1,62 @@
-"""
-Модуль для обработки данных банковских операций.
-Содержит функции для фильтрации по статусу и сортировки по дате.
-"""
+"""Модуль для обработки транзакций."""
 
-from typing import List, Dict
+from datetime import datetime
+from typing import Any, Dict, List
 
 
-def filter_by_state(data: List[Dict[str, str | int]], state: str = 'EXECUTED') -> List[Dict[str, str | int]]:
+def filter_by_state(transactions: List[Dict[str, Any]], state: str) -> List[Dict[str, Any]]:
     """
-    Фильтрует список словарей по значению ключа 'state'.
+    Фильтрует транзакции по статусу.
 
-    Args:
-        data (List[Dict[str, str | int]]): Список словарей с данными операций.
-            Каждый словарь должен содержать ключи 'id', 'state', 'date'.
-        state (str): Значение для фильтрации. По умолчанию 'EXECUTED'.
+    Аргументы:
+        transactions: Список словарей с транзакциями
+        state: Статус для фильтрации
 
-    Returns:
-        List[Dict[str, str | int]]: Новый список словарей, содержащий только те записи,
-            у которых ключ 'state' соответствует указанному значению.
-
-    Examples:
-        >>> transactions = [
-        ...     {'id': 41428829, 'state': 'EXECUTED', 'date': '2019-07-03T18:35:29.512364'},
-        ...     {'id': 939719570, 'state': 'EXECUTED', 'date': '2018-06-30T02:08:58.425572'},
-        ...     {'id': 594226727, 'state': 'CANCELED', 'date': '2018-09-12T21:27:25.241689'}
-        ... ]
-        >>> filter_by_state(transactions)
-        [{'id': 41428829, 'state': 'EXECUTED', 'date': '2019-07-03T18:35:29.512364'},
-         {'id': 939719570, 'state': 'EXECUTED', 'date': '2018-06-30T02:08:58.425572'}]
+    Возвращает:
+        Отфильтрованный список транзакций
     """
-    return [item for item in data if item.get('state') == state]
+    return [t for t in transactions if t.get("state") == state]
 
 
-def sort_by_date(data: List[Dict[str, str | int]], descending: bool = True) -> List[Dict[str, str | int]]:
+def sort_by_date(transactions: List[Dict[str, Any]], ascending: bool = False) -> List[Dict[str, Any]]:
     """
-    Сортирует список словарей по дате.
+    Сортирует транзакции по дате.
 
-    Args:
-        data (List[Dict[str, str | int]]): Список словарей с данными операций.
-            Каждый словарь должен содержать ключ 'date' с датой в формате ISO.
-        descending (bool): Порядок сортировки.
-            True - по убыванию (сначала новые), False - по возрастанию (сначала старые).
-            По умолчанию True.
+    Аргументы:
+        transactions: Список словарей с ключом 'date'
+        ascending: Если True - сортировка по возрастанию, иначе по убыванию
 
-    Returns:
-        List[Dict[str, str | int]]: Новый список словарей, отсортированный по дате.
-
-    Examples:
-        >>> transactions = [
-        ...     {'id': 41428829, 'state': 'EXECUTED', 'date': '2019-07-03T18:35:29.512364'},
-        ...     {'id': 939719570, 'state': 'EXECUTED', 'date': '2018-06-30T02:08:58.425572'},
-        ...     {'id': 594226727, 'state': 'CANCELED', 'date': '2018-09-12T21:27:25.241689'}
-        ... ]
-        >>> sort_by_date(transactions)
-        [{'id': 41428829, 'state': 'EXECUTED', 'date': '2019-07-03T18:35:29.512364'},
-         {'id': 594226727, 'state': 'CANCELED', 'date': '2018-09-12T21:27:25.241689'},
-         {'id': 939719570, 'state': 'EXECUTED', 'date': '2018-06-30T02:08:58.425572'}]
+    Возвращает:
+        Отсортированный список транзакций
     """
-    return sorted(data, key=lambda x: x.get('date', ''), reverse=descending)
+
+    def get_date(transaction: Dict[str, Any]) -> datetime:
+        """Извлекает и парсит дату из транзакции."""
+        date_str = transaction.get("date")
+        if not date_str:
+            raise KeyError("Отсутствует ключ 'date' в транзакции")
+
+        # Пробуем разные форматы даты
+        try:
+            # Стандартный ISO формат
+            return datetime.fromisoformat(str(date_str).replace("Z", "+00:00"))
+        except ValueError:
+            try:
+                # Формат с миллисекундами
+                return datetime.strptime(str(date_str), "%Y-%m-%dT%H:%M:%S.%f")
+            except ValueError:
+                try:
+                    # Формат без времени
+                    return datetime.strptime(str(date_str), "%Y-%m-%d")
+                except ValueError as e:
+                    raise ValueError(f"Неверный формат даты: {date_str}") from e
+
+    # Для стабильной сортировки при одинаковых датах
+    # Создаем список с индексами для сохранения порядка
+    indexed_transactions = list(enumerate(transactions))
+
+    # Сортируем по дате и индексу
+    sorted_indexed = sorted(indexed_transactions, key=lambda x: (get_date(x[1]), x[0]), reverse=not ascending)
+
+    # Возвращаем только транзакции
+    return [t for _, t in sorted_indexed]

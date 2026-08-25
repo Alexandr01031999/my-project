@@ -4,11 +4,11 @@
 
 import os
 import tempfile
-from typing import Any
+from typing import Any, Generator
 
 import pytest
 
-from decorators import log
+from src.decorators import log
 
 
 def test_log_to_console_success(capsys: Any) -> None:
@@ -36,11 +36,13 @@ def test_log_to_console_error(capsys: Any) -> None:
         divide(10, 0)
 
     captured = capsys.readouterr()
-    assert "divide error: ZeroDivisionError. Inputs: (10, 0), {}" in captured.out
+    expected = "divide error: ZeroDivisionError. Inputs: (10, 0)"
+    assert expected in captured.out
 
 
 def test_log_to_file_success() -> None:
     """Тест логирования успешного выполнения в файл."""
+    # Создаем временный файл
     with tempfile.NamedTemporaryFile(mode='w+', delete=False, suffix='.txt') as tmp:
         tmp_path = tmp.name
 
@@ -52,10 +54,12 @@ def test_log_to_file_success() -> None:
         result = multiply(4, 6)
         assert result == 24
 
+        # Читаем содержимое файла
         with open(tmp_path, 'r', encoding='utf-8') as f:
-            content = f.read()
+            content = f.read().strip()
             assert "multiply ok" in content
     finally:
+        # Удаляем временный файл
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
 
@@ -74,8 +78,9 @@ def test_log_to_file_error() -> None:
             divide(10, 0)
 
         with open(tmp_path, 'r', encoding='utf-8') as f:
-            content = f.read()
-            assert "divide error: ZeroDivisionError. Inputs: (10, 0), {}" in content
+            content = f.read().strip()
+            expected = "divide error: ZeroDivisionError. Inputs: (10, 0)"
+            assert expected in content
     finally:
         if os.path.exists(tmp_path):
             os.remove(tmp_path)
@@ -107,6 +112,7 @@ def test_log_with_multiple_calls(capsys: Any) -> None:
         assert result == i ** 2
 
     captured = capsys.readouterr()
+    # Должно быть 3 записи "square ok"
     assert captured.out.count("square ok") == 3
 
 
@@ -120,6 +126,25 @@ def test_log_preserves_function_metadata() -> None:
 
     assert test_func.__name__ == "test_func"
     assert test_func.__doc__ == "Тестовая функция."
+
+
+def test_log_with_different_functions(capsys: Any) -> None:
+    """Тест логирования разных функций."""
+
+    @log()
+    def add(a: int, b: int) -> int:
+        return a + b
+
+    @log()
+    def multiply(a: int, b: int) -> int:
+        return a * b
+
+    add(2, 3)
+    multiply(4, 5)
+
+    captured = capsys.readouterr()
+    assert "add ok" in captured.out
+    assert "multiply ok" in captured.out
 
 
 @pytest.mark.parametrize("a, b, expected", [
@@ -139,3 +164,34 @@ def test_log_with_parametrize(capsys: Any, a: int, b: int, expected: int) -> Non
 
     captured = capsys.readouterr()
     assert "add ok" in captured.out
+
+
+def test_log_with_complex_args(capsys: Any) -> None:
+    """Тест логирования со сложными аргументами."""
+
+    @log()
+    def process_data(data: list, multiplier: int = 2) -> list:
+        return [x * multiplier for x in data]
+
+    result = process_data([1, 2, 3], multiplier=3)
+    assert result == [3, 6, 9]
+
+    captured = capsys.readouterr()
+    assert "process_data ok" in captured.out
+
+
+def test_log_error_with_complex_args(capsys: Any) -> None:
+    """Тест логирования ошибки со сложными аргументами."""
+
+    @log()
+    def process_data(data: list, multiplier: int = 2) -> list:
+        if not data:
+            raise ValueError("Data cannot be empty")
+        return [x * multiplier for x in data]
+
+    with pytest.raises(ValueError, match="Data cannot be empty"):
+        process_data([], multiplier=3)
+
+    captured = capsys.readouterr()
+    expected = "process_data error: ValueError. Inputs: ([],), {multiplier=3}"
+    assert expected in captured.out

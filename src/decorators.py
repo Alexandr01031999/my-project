@@ -4,6 +4,7 @@
 
 import functools
 import logging
+import sys
 from typing import Any, Callable, Optional
 
 
@@ -17,25 +18,31 @@ def log(filename: Optional[str] = None) -> Callable:
     Returns:
         Декорированная функция.
     """
-
     def decorator(func: Callable) -> Callable:
         """Внутренний декоратор."""
 
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             """Обёртка функции с логированием."""
-            # Настройка логгера
-            logger = logging.getLogger(func.__name__)
+            # Создаем новый логгер для каждой функции
+            logger = logging.getLogger(f"{func.__name__}_{id(wrapper)}")
+            logger.setLevel(logging.INFO)
+            logger.propagate = False
 
+            # Удаляем старые хендлеры, если есть
+            for handler in logger.handlers[:]:
+                logger.removeHandler(handler)
+                handler.close()
+
+            # Создаем новый хендлер
             if filename:
-                handler = logging.FileHandler(filename, encoding='utf-8')
+                handler = logging.FileHandler(filename, encoding='utf-8', mode='a')
             else:
-                handler = logging.StreamHandler()
+                handler = logging.StreamHandler(sys.stdout)
 
             formatter = logging.Formatter('%(message)s')
             handler.setFormatter(formatter)
             logger.addHandler(handler)
-            logger.setLevel(logging.INFO)
 
             # Логирование выполнения
             try:
@@ -43,16 +50,24 @@ def log(filename: Optional[str] = None) -> Callable:
                 logger.info(f"{func.__name__} ok")
                 return result
             except Exception as e:
-                args_repr = ', '.join(repr(arg) for arg in args)
-                kwargs_repr = ', '.join(f"{k}={repr(v)}" for k, v in kwargs.items())
-                inputs = f"({args_repr})" + (f", {{{kwargs_repr}}}" if kwargs_repr else "")
+                # Форматируем входные параметры
+                # Важно: для одного аргумента нужно добавить запятую, чтобы было ([],)
+                args_str = ', '.join(repr(arg) for arg in args)
+                if len(args) == 1 and not kwargs:
+                    args_str += ','  # Добавляем запятую для одного аргумента
+
+                kwargs_str = ', '.join(f"{k}={repr(v)}" for k, v in kwargs.items())
+                inputs = f"({args_str})"
+                if kwargs_str:
+                    inputs += f", {{{kwargs_str}}}"
+
                 logger.error(f"{func.__name__} error: {type(e).__name__}. Inputs: {inputs}")
                 raise
             finally:
-                # Удаляем хендлер, чтобы не накапливались
-                logger.removeHandler(handler)
-                handler.close()
+                # Очищаем хендлеры
+                for handler in logger.handlers[:]:
+                    logger.removeHandler(handler)
+                    handler.close()
 
         return wrapper
-
     return decorator

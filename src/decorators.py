@@ -13,7 +13,8 @@ def log(filename: Optional[str] = None) -> Callable:
     Декоратор для логирования выполнения функции.
 
     Args:
-        filename: Имя файла для записи логов. Если не указан, логи выводятся в консоль.
+        filename: Имя файла для записи логов.
+            Если не указан, логи выводятся в консоль.
 
     Returns:
         Декорированная функция.
@@ -24,17 +25,16 @@ def log(filename: Optional[str] = None) -> Callable:
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             """Обёртка функции с логированием."""
-            # Создаем новый логгер для каждой функции
             logger = logging.getLogger(f"{func.__name__}_{id(wrapper)}")
             logger.setLevel(logging.INFO)
             logger.propagate = False
 
-            # Удаляем старые хендлеры, если есть
+            # Удаляем старые хендлеры
             for handler in logger.handlers[:]:
                 logger.removeHandler(handler)
                 handler.close()
 
-            # Создаем новый хендлер
+            # Создаём новый хендлер
             if filename:
                 handler = logging.FileHandler(filename, encoding='utf-8', mode='a')
             else:
@@ -44,24 +44,28 @@ def log(filename: Optional[str] = None) -> Callable:
             handler.setFormatter(formatter)
             logger.addHandler(handler)
 
-            # Логирование выполнения
             try:
                 result = func(*args, **kwargs)
                 logger.info(f"{func.__name__} ok")
                 return result
             except Exception as e:
-                # Форматируем входные параметры
-                # Важно: для одного аргумента нужно добавить запятую, чтобы было ([],)
+                # Форматируем позиционные аргументы
                 args_str = ', '.join(repr(arg) for arg in args)
-                if len(args) == 1 and not kwargs:
-                    args_str += ','  # Добавляем запятую для одного аргумента
+                # Запятая нужна всегда, если аргумент ровно один
+                if len(args) == 1:
+                    args_str += ','
 
+                # Форматируем именованные аргументы
                 kwargs_str = ', '.join(f"{k}={repr(v)}" for k, v in kwargs.items())
+
+                # Собираем inputs
                 inputs = f"({args_str})"
                 if kwargs_str:
                     inputs += f", {{{kwargs_str}}}"
 
-                logger.error(f"{func.__name__} error: {type(e).__name__}. Inputs: {inputs}")
+                logger.error(
+                    f"{func.__name__} error: {type(e).__name__}. Inputs: {inputs}"
+                )
                 raise
             finally:
                 # Очищаем хендлеры

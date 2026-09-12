@@ -23,3 +23,18 @@ def sample_card_account_strings():
         {"input": "Счет 12345678901234567890", "expected": "Счет **7890"},
         {"input": "Maestro 123456789012", "expected": "Maestro 1234 56** **** 9012"},
     ]
+
+"""
+Общие фикстуры для тестов.
+"""
+
+import pytest
+
+
+@pytest.fixture
+def mock_api_response():
+    """Фикстура для мок-ответа API."""
+    return {
+        "success": True,
+        "result": 7500.00
+    }

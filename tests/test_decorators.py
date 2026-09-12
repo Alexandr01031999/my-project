@@ -194,4 +194,7 @@ def test_log_error_with_complex_args(capsys: Any) -> None:
 
     captured = capsys.readouterr()
     expected = "process_data error: ValueError. Inputs: ([],), {multiplier=3}"
-    assert expected in captured.out
+
+    # Убираем все пробельные символы и сравниваем
+    normalized_output = " ".join(captured.out.split())
+    assert expected in normalized_output

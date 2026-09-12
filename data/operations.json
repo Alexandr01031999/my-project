@@ -1,0 +1,30 @@
+[
+  {
+    "id": 1,
+    "date": "2024-01-15",
+    "description": "Покупка продуктов",
+    "amount": 1500.50,
+    "currency": "RUB"
+  },
+  {
+    "id": 2,
+    "date": "2024-01-16",
+    "description": "Оплата сервиса",
+    "amount": 50.00,
+    "currency": "USD"
+  },
+  {
+    "id": 3,
+    "date": "2024-01-17",
+    "description": "Покупка в интернет-магазине",
+    "amount": 45.00,
+    "currency": "EUR"
+  },
+  {
+    "id": 4,
+    "date": "2024-01-18",
+    "description": "Оплата подписки",
+    "amount": 100.00,
+    "currency": "USD"
+  }
+]

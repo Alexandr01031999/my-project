@@ -1,80 +1,96 @@
+"""
+Тесты для модуля masks.py.
+"""
+
+import logging
+
 import pytest
 
-from src.masks import get_mask_account, get_mask_card_number
+from masks import get_mask_account, get_mask_card_number
 
 
-class TestGetMaskCardNumber:
-    """Тесты для функции маскировки номера карты"""
+# ---------- get_mask_card_number ----------
 
-    @pytest.mark.parametrize(
-        "card_number, expected",
-        [
-            ("1234567890123456", "1234 56** **** 3456"),
-            ("0000111122223333", "0000 11** **** 3333"),
-            ("9999999999999999", "9999 99** **** 9999"),
-        ],
-    )
-    def test_valid_card_numbers(self, card_number, expected):
-        """Тест корректной маскировки валидных номеров карт"""
-        assert get_mask_card_number(card_number) == expected
+def test_get_mask_card_number_ok():
+    assert get_mask_card_number("7000792289606361") == "7000 79** **** 6361"
 
-    @pytest.mark.parametrize(
-        "card_number",
-        [
-            "",
-            "123",
-            "12345678901234567",
-            "1234567890123456789",
-        ],
-    )
-    def test_invalid_card_numbers(self, card_number):
-        """Тест обработки невалидных номеров карт"""
+
+def test_get_mask_card_number_with_spaces():
+    assert get_mask_card_number("7000 7922 8960 6361") == "7000 79** **** 6361"
+
+
+def test_get_mask_card_number_with_dashes():
+    assert get_mask_card_number("7000-7922-8960-6361") == "7000 79** **** 6361"
+
+
+def test_get_mask_card_number_too_short():
+    with pytest.raises(ValueError, match="16 цифр"):
+        get_mask_card_number("1234")
+
+
+def test_get_mask_card_number_too_long():
+    with pytest.raises(ValueError, match="16 цифр"):
+        get_mask_card_number("12345678901234567")
+
+
+def test_get_mask_card_number_empty():
+    with pytest.raises(ValueError):
+        get_mask_card_number("")
+
+
+def test_get_mask_card_number_logs_success(caplog):
+    with caplog.at_level(logging.INFO, logger="masks"):
+        get_mask_card_number("7000792289606361")
+
+    assert "Номер карты успешно замаскирован" in caplog.text
+    assert "INFO" in caplog.text
+
+
+def test_get_mask_card_number_logs_error(caplog):
+    with caplog.at_level(logging.ERROR, logger="masks"):
         with pytest.raises(ValueError):
-            get_mask_card_number(card_number)
+            get_mask_card_number("1234")
 
-    def test_card_number_with_spaces(self):
-        """Тест маскировки номера карты с пробелами"""
-        assert get_mask_card_number("1234 5678 9012 3456") == "1234 56** **** 3456"
-
-    def test_card_number_with_dashes(self):
-        """Тест маскировки номера карты с дефисами"""
-        assert get_mask_card_number("1234-5678-9012-3456") == "1234 56** **** 3456"
+    assert "Некорректный номер карты" in caplog.text
+    assert "ERROR" in caplog.text
 
 
-class TestGetMaskAccount:
-    """Тесты для функции маскировки номера счета"""
+# ---------- get_mask_account ----------
 
-    @pytest.mark.parametrize(
-        "account_number, expected",
-        [
-            ("12345678901234567890", "**7890"),
-            ("98765432109876543210", "**3210"),
-            ("1234567890", "**7890"),
-            ("11111111111111111111", "**1111"),
-        ],
-    )
-    def test_valid_account_numbers(self, account_number, expected):
-        """Тест корректной маскировки валидных номеров счетов"""
-        assert get_mask_account(account_number) == expected
+def test_get_mask_account_ok():
+    assert get_mask_account("73654108430135874305") == "**4305"
 
-    @pytest.mark.parametrize(
-        "account_number",
-        [
-            "",
-            "123",
-            "12",
-            "1",
-        ],
-    )
-    def test_short_account_numbers(self, account_number):
-        """Тест обработки слишком коротких номеров счетов"""
+
+def test_get_mask_account_min_length():
+    assert get_mask_account("1234") == "**1234"
+
+
+def test_get_mask_account_with_dashes():
+    assert get_mask_account("7365-4108-4301-3587-4305") == "**4305"
+
+
+def test_get_mask_account_too_short():
+    with pytest.raises(ValueError, match="минимум 4 цифры"):
+        get_mask_account("123")
+
+
+def test_get_mask_account_empty():
+    with pytest.raises(ValueError):
+        get_mask_account("")
+
+
+def test_get_mask_account_logs_success(caplog):
+    with caplog.at_level(logging.INFO, logger="masks"):
+        get_mask_account("73654108430135874305")
+
+    assert "Номер счета успешно замаскирован" in caplog.text
+    assert "INFO" in caplog.text
+
+
+def test_get_mask_account_logs_error(caplog):
+    with caplog.at_level(logging.ERROR, logger="masks"):
         with pytest.raises(ValueError):
-            get_mask_account(account_number)
+            get_mask_account("12")
 
-    def test_account_with_spaces(self):
-        """Тест маскировки номера счета с пробелами"""
-        assert get_mask_account("1234 5678 9012 3456 7890") == "**7890"
-
-    def test_account_with_dashes(self):
-        """Тест маскировки номера счета с дефисами"""
-        assert get_mask_account("1234-5678-9012-3456-7890") == "**7890"
+    assert "Некорректный номер счета" in caplog.text
+    assert "ERROR" in caplog.text

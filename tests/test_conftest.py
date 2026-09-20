@@ -1,40 +1,50 @@
-"""Общие фикстуры для всех тестов."""
-
-import pytest
-
-
-@pytest.fixture
-def sample_transactions():
-    """Фикстура с тестовыми транзакциями."""
-    return [
-        {"id": 1, "state": "EXECUTED", "date": "2023-10-01T12:00:00", "amount": 100},
-        {"id": 2, "state": "PENDING", "date": "2023-09-15T10:30:00", "amount": 200},
-        {"id": 3, "state": "EXECUTED", "date": "2023-10-15T08:45:00", "amount": 300},
-        {"id": 4, "state": "CANCELED", "date": "2023-08-01T15:20:00", "amount": 400},
-    ]
-
-
-@pytest.fixture
-def sample_card_account_strings():
-    """Фикстура с различными строковыми представлениями карт и счетов."""
-    return [
-        {"input": "Visa 1234567890123456", "expected": "Visa 1234 56** **** 3456"},
-        {"input": "MasterCard 9876543210987654", "expected": "MasterCard 9876 54** **** 7654"},
-        {"input": "Счет 12345678901234567890", "expected": "Счет **7890"},
-        {"input": "Maestro 123456789012", "expected": "Maestro 1234 56** **** 9012"},
-    ]
-
 """
 Общие фикстуры для тестов.
 """
 
+import logging
+import sys
+from pathlib import Path
+
 import pytest
 
+# Добавляем корень проекта в sys.path, чтобы импортировать src.*
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
-@pytest.fixture
-def mock_api_response():
-    """Фикстура для мок-ответа API."""
-    return {
-        "success": True,
-        "result": 7500.00
-    }
+
+@pytest.fixture(autouse=True)
+def clean_loggers():
+    """
+    Перед и после каждого теста удаляет handlers у логеров masks и utils,
+    чтобы setup_logger создал их заново уже с tmp-путём.
+    """
+    for name in ("masks", "utils"):
+        lg = logging.getLogger(name)
+        for handler in lg.handlers[:]:
+            handler.close()
+            lg.removeHandler(handler)
+
+    yield
+
+    for name in ("masks", "utils"):
+        lg = logging.getLogger(name)
+        for handler in lg.handlers[:]:
+            handler.close()
+            lg.removeHandler(handler)
+
+
+@pytest.fixture(autouse=True)
+def logs_in_tmp(tmp_path, monkeypatch):
+    """
+    Перенаправляет папку logs в tmp_path для каждого теста.
+    Возвращает путь к временной папке logs.
+    """
+    import logger as logger_module
+
+    tmp_logs = tmp_path / "logs"
+    tmp_logs.mkdir(parents=True, exist_ok=True)
+
+    monkeypatch.setattr(logger_module, "LOG_DIR", str(tmp_logs))
+    yield tmp_logs

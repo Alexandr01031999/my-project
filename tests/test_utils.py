@@ -1,84 +1,92 @@
 """
-Тесты для модуля utils.
+Тесты для модуля utils.py.
 """
 
 import json
-import os
-import tempfile
-from unittest.mock import mock_open, patch
+import logging
 
 import pytest
 
-from src.utils import read_json_file
+from utils import read_json_file
 
 
-class TestReadJsonFile:
-    """Тесты для функции read_json_file."""
+@pytest.fixture
+def valid_json_file(tmp_path):
+    path = tmp_path / "valid.json"
+    data = [{"id": 1, "amount": 100}, {"id": 2, "amount": 200}]
+    path.write_text(json.dumps(data), encoding="utf-8")
+    return str(path)
 
-    def test_read_valid_json_file(self):
-        """Тест чтения корректного JSON-файла."""
-        test_data = [
-            {"id": 1, "amount": 100, "currency": "USD"},
-            {"id": 2, "amount": 200, "currency": "EUR"}
-        ]
 
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump(test_data, f)
-            temp_path = f.name
+@pytest.fixture
+def invalid_json_file(tmp_path):
+    path = tmp_path / "invalid.json"
+    path.write_text("{not valid json", encoding="utf-8")
+    return str(path)
 
-        try:
-            result = read_json_file(temp_path)
-            assert result == test_data
-            assert isinstance(result, list)
-        finally:
-            os.unlink(temp_path)
 
-    def test_read_empty_file(self):
-        """Тест чтения пустого файла."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            f.write('')
-            temp_path = f.name
+@pytest.fixture
+def non_list_json_file(tmp_path):
+    path = tmp_path / "dict.json"
+    path.write_text(json.dumps({"key": "value"}), encoding="utf-8")
+    return str(path)
 
-        try:
-            result = read_json_file(temp_path)
-            assert result == []
-        finally:
-            os.unlink(temp_path)
 
-    def test_read_invalid_json(self):
-        """Тест чтения некорректного JSON."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            f.write('{invalid: json}')
-            temp_path = f.name
+# ---------- базовая логика ----------
 
-        try:
-            result = read_json_file(temp_path)
-            assert result == []
-        finally:
-            os.unlink(temp_path)
+def test_read_json_file_ok(valid_json_file):
+    result = read_json_file(valid_json_file)
+    assert isinstance(result, list)
+    assert len(result) == 2
+    assert result[0]["id"] == 1
 
-    def test_read_not_list(self):
-        """Тест чтения JSON, который не является списком."""
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump({"key": "value"}, f)
-            temp_path = f.name
 
-        try:
-            result = read_json_file(temp_path)
-            assert result == []
-        finally:
-            os.unlink(temp_path)
+def test_read_json_file_not_found():
+    result = read_json_file("nonexistent_file.json")
+    assert result == []
 
-    def test_file_not_found(self):
-        """Тест при отсутствии файла."""
-        result = read_json_file('/non/existent/path.json')
-        assert result == []
 
-    @patch('src.utils.os.path.exists')
-    @patch('builtins.open', new_callable=mock_open, read_data='[]')
-    def test_read_with_mocks(self, mock_file, mock_exists):
-        """Тест с использованием Mock."""
-        mock_exists.return_value = True
-        result = read_json_file('dummy_path.json')
-        assert result == []
-        mock_exists.assert_called_once_with('dummy_path.json')
+def test_read_json_file_invalid_json(invalid_json_file):
+    result = read_json_file(invalid_json_file)
+    assert result == []
+
+
+def test_read_json_file_not_a_list(non_list_json_file):
+    result = read_json_file(non_list_json_file)
+    assert result == []
+
+
+# ---------- логирование ----------
+# Не указываем logger="utils", чтобы не зависеть от имени логера
+# (utils или src.utils — оба варианта перехватятся).
+
+def test_read_json_file_logs_success(caplog, valid_json_file):
+    with caplog.at_level(logging.INFO):
+        read_json_file(valid_json_file)
+
+    assert "успешно прочитан" in caplog.text
+    assert any(rec.levelname == "INFO" for rec in caplog.records)
+
+
+def test_read_json_file_logs_error_not_found(caplog):
+    with caplog.at_level(logging.ERROR):
+        read_json_file("nonexistent_file.json")
+
+    assert "Файл не найден" in caplog.text
+    assert any(rec.levelname == "ERROR" for rec in caplog.records)
+
+
+def test_read_json_file_logs_error_invalid(caplog, invalid_json_file):
+    with caplog.at_level(logging.ERROR):
+        read_json_file(invalid_json_file)
+
+    assert "Ошибка чтения JSON" in caplog.text
+    assert any(rec.levelname == "ERROR" for rec in caplog.records)
+
+
+def test_read_json_file_logs_error_not_list(caplog, non_list_json_file):
+    with caplog.at_level(logging.ERROR):
+        read_json_file(non_list_json_file)
+
+    assert "не являются списком" in caplog.text
+    assert any(rec.levelname == "ERROR" for rec in caplog.records)

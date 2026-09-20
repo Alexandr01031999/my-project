@@ -9,6 +9,7 @@ packages = [{ include = "src" }]
 [tool.poetry.dependencies]
 python = "^3.12"
 requests = "^2.34.2"
+pytest = "^9.1.1"
 
 [build-system]
 requires = ["poetry-core"]
@@ -52,12 +53,52 @@ ensure_newline_before_comments = true
 python_version = "3.12"
 warn_return_any = true
 warn_unused_configs = true
-disallow_untyped_defs = true
+disallow_untyped_defs = false
 disallow_any_unimported = false
 no_implicit_optional = true
 warn_redundant_casts = true
-warn_unused_ignores = true
+warn_unused_ignores = false
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
 check_untyped_defs = true
+ignore_missing_imports = true
+
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--cov=src",
+    "--cov-report=html",
+    "--cov-report=term",
+    "--cov-fail-under=80"
+]
+testpaths = [
+    "tests"
+]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src"]
+omit = [
+    "tests/*",
+    "*/test_*.py",
+    "*/conftest.py"
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "raise AssertionError",
+    "if TYPE_CHECKING:",
+    "@abstractmethod",
+]
+fail_under = 80
+

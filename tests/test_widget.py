@@ -1,48 +1,100 @@
-"""
-Тесты для модуля widget
-"""
+"""Тесты для модуля widget."""
 
-import sys
-import os
+import pytest
 
-# Добавляем путь к корневой папке проекта
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from src.widget import mask_account_card, get_date
+from src.widget import get_date, mask_account_card
 
 
-def test_mask_account_card():
-    """Тестирование функции mask_account_card"""
-    # Тесты для карт
-    assert mask_account_card("Visa Platinum 7000792289606361") == "Visa Platinum 7000 79** **** 6361"
-    assert mask_account_card("Maestro 1596837868705199") == "Maestro 1596 83** **** 5199"
-    assert mask_account_card("MasterCard 7158300734726758") == "MasterCard 7158 30** **** 6758"
-    assert mask_account_card("Visa Classic 6831982476737658") == "Visa Classic 6831 98** **** 7658"
-    assert mask_account_card("Visa Platinum 8990922113665229") == "Visa Platinum 8990 92** **** 5229"
-    assert mask_account_card("Visa Gold 5999414228426353") == "Visa Gold 5999 41** **** 6353"
+class TestMaskAccountCard:
+    """Тесты для функции маскировки карты или счета."""
 
-    # Тесты для счетов
-    assert mask_account_card("Счет 64686473678894779589") == "Счет **9589"
-    assert mask_account_card("Счет 35383033474447895560") == "Счет **5560"
-    assert mask_account_card("Счет 73654108430135874305") == "Счет **4305"
+    @pytest.mark.parametrize(
+        "input_str, expected",
+        [
+            ("Visa 1234567890123456", "Visa 1234 56** **** 3456"),
+            ("MasterCard 9876543210987654", "MasterCard 9876 54** **** 7654"),
+            ("Maestro 123456789012", "Maestro 1234 56** **** 9012"),
+            ("Счет 12345678901234567890", "Счет **7890"),
+            ("Счет 9876543210", "Счет **3210"),
+            ("Visa Classic 1234567890123456", "Visa Classic 1234 56** **** 3456"),
+            ("MIR 1234567890123456", "MIR 1234 56** **** 3456"),
+            ("UnionPay 1234567890123456", "UnionPay 1234 56** **** 3456"),
+        ],
+    )
+    def test_valid_card_account_masking(self, input_str: str, expected: str) -> None:
+        """Тест корректной маскировки различных типов карт и счетов."""
+        assert mask_account_card(input_str) == expected
 
-    # Тест на некорректный ввод
-    assert mask_account_card("Неверный формат") == "Неверный формат"
-    assert mask_account_card("Счет 123 456") == "Счет 123 456"
+    @pytest.mark.parametrize(
+        "input_str",
+        [
+            "",
+            "  ",
+            "Visa",
+            "Счет",
+            "InvalidCard 123",
+        ],
+    )
+    def test_invalid_inputs(self, input_str: str) -> None:
+        """Тест обработки некорректных входных данных."""
+        with pytest.raises(ValueError):
+            mask_account_card(input_str)
 
-    print("✅ Все тесты mask_account_card пройдены!")
+    def test_multiple_spaces_in_card_type(self) -> None:
+        """Тест обработки нескольких пробелов в названии карты."""
+        result = mask_account_card("Visa   Classic   1234567890123456")
+        assert result == "Visa Classic 1234 56** **** 3456"
+
+    def test_card_without_type(self) -> None:
+        """Тест маскировки карты без указания типа."""
+        result = mask_account_card("1234567890123456")
+        assert result == "1234 56** **** 3456"
 
 
-def test_get_date():
-    """Тестирование функции get_date"""
-    assert get_date("2024-03-11T02:26:18.671407") == "11.03.2024"
-    assert get_date("2023-12-25T15:30:00") == "25.12.2023"
-    assert get_date("2022-01-01T00:00:00.000000") == "01.01.2022"
+class TestGetDate:
+    """Тесты для функции преобразования даты."""
 
-    print("✅ Все тесты get_date пройдены!")
+    @pytest.mark.parametrize(
+        "date_str, expected",
+        [
+            ("2023-10-01T12:00:00", "01.10.2023"),
+            ("2023-12-25T23:59:59", "25.12.2023"),
+            ("2024-01-01T00:00:00", "01.01.2024"),
+            ("2022-03-15T08:30:00", "15.03.2022"),
+            ("2023-06-07T18:45:22", "07.06.2023"),
+        ],
+    )
+    def test_valid_date_formats(self, date_str: str, expected: str) -> None:
+        """Тест преобразования валидных форматов даты."""
+        assert get_date(date_str) == expected
 
+    @pytest.mark.parametrize(
+        "date_str",
+        [
+            "",
+            "  ",
+            "2023/10/01",
+            "01-10-2023",
+            "2023-10-01T",
+            "invalid-date",
+        ],
+    )
+    def test_invalid_date_formats(self, date_str: str) -> None:
+        """Тест обработки невалидных форматов даты."""
+        with pytest.raises(ValueError):
+            get_date(date_str)
 
-if __name__ == "__main__":
-    test_mask_account_card()
-    test_get_date()
-    print("\n🎉 Все тесты успешно пройдены!")
+    def test_date_with_milliseconds(self) -> None:
+        """Тест преобразования даты с миллисекундами."""
+        result = get_date("2023-10-01T12:00:00.123456")
+        assert result == "01.10.2023"
+
+    def test_date_with_timezone(self) -> None:
+        """Тест преобразования даты с часовым поясом."""
+        result = get_date("2023-10-01T12:00:00+03:00")
+        assert result == "01.10.2023"
+
+    def test_date_with_microseconds(self) -> None:
+        """Тест преобразования даты с микросекундами."""
+        result = get_date("2023-12-25T23:59:59.999999")
+        assert result == "25.12.2023"

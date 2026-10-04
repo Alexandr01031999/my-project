@@ -1,6 +1,6 @@
 [flake8]
 max-line-length = 119
-exclude = .git,__pycache__,build,dist,.venv,.mypy_cache,.pytest_cache,.tox,venv
+exclude = .git,__pycache__,build,dist,venv,env,.venv,.env,.mypy_cache,.pytest_cache,.tox
 extend-ignore = E203, W503
 max-complexity = 10
 docstring-convention = google

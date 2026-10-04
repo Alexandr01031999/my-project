@@ -3,7 +3,8 @@
 """
 
 import os
-from typing import Dict, Any, Optional
+from typing import Any, Dict, Optional
+
 import requests
 from dotenv import load_dotenv
 
@@ -44,8 +45,7 @@ def convert_currency_to_rub(transaction: Dict[str, Any]) -> float:
 
 
 def _convert_via_api(amount: float, currency: str) -> float:
-    """
-    Конвертирует сумму через внешнее API.
+    """Конвертирует сумму через внешнее API.
 
     Args:
         amount (float): Сумма для конвертации.
@@ -63,10 +63,10 @@ def _convert_via_api(amount: float, currency: str) -> float:
 
     url = "https://api.apilayer.com/exchangerates_data/convert"
     headers = {"apikey": api_key}
-    params = {
+    params: dict[str, str | int | float] = {
         "to": "RUB",
         "from": currency.upper(),
-        "amount": amount
+        "amount": amount,
     }
 
     try:

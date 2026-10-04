@@ -3,7 +3,7 @@
 Содержит функции для фильтрации по валюте, получения описаний и генерации номеров карт.
 """
 
-from typing import Iterator, List, Dict, Any
+from typing import Any, Dict, Iterator, List
 
 
 def filter_by_currency(transactions: List[Dict[str, Any]], currency: str) -> Iterator[Dict[str, Any]]:

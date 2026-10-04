@@ -3,11 +3,12 @@
 """
 
 import os
-from unittest.mock import patch, MagicMock
-import requests
-import pytest
+from unittest.mock import MagicMock, patch
 
-from src.external_api import convert_currency_to_rub, _convert_via_api
+import pytest
+import requests
+
+from src.external_api import _convert_via_api, convert_currency_to_rub
 
 
 class TestConvertCurrencyToRub:

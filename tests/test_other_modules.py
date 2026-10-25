@@ -2,9 +2,7 @@
 Тесты для остальных модулей проекта.
 """
 
-import pytest
-
-from src import masks, processing, widget
+from src import masks, processing
 
 
 def test_masks_get_mask_card_number() -> None:

@@ -1,52 +1,32 @@
-import pytest
-import json
-import os
-import shutil
-from src.main import main
+# Фейковые данные для тестов
+FAKE_TRANSACTIONS = [
+    {
+        "date": "01.01.2024",
+        "description": "Перевод организации",
+        "state": "EXECUTED",
+        "operationAmount": {"amount": "1000", "currency": {"code": "RUB", "name": "руб."}},
+        "from": "MasterCard 1234 5678 9012 3456",
+        "to": "Счет 98765432101234567890"
+    },
+    {
+        "date": "02.01.2024",
+        "description": "Открытие вклада",
+        "state": "CANCELED",
+        "operationAmount": {"amount": "500", "currency": {"code": "USD", "name": "USD"}},
+        "to": "Счет 11112222333344445555"
+    }
+]
 
 
 @pytest.fixture(autouse=True)
-def setup_dummy_files():
-    """Создает временную папку data с файлами для тестов и удаляет после."""
-    os.makedirs("data", exist_ok=True)
-
-    # Фейковые транзакции (с разными статусами и валютами)
-    fake_transactions = [
-        {
-            "date": "01.01.2024",
-            "description": "Перевод организации",
-            "state": "EXECUTED",
-            "operationAmount": {"amount": "1000", "currency": {"code": "RUB", "name": "руб."}},
-            "from": "Счет 1234",
-            "to": "Счет 5678"
-        },
-        {
-            "date": "02.01.2024",
-            "description": "Открытие вклада",
-            "state": "CANCELED",
-            "operationAmount": {"amount": "500", "currency": {"code": "USD", "name": "USD"}},
-            "from": "",
-            "to": "Счет 9999"
-        }
-    ]
-
-    # Записываем данные в JSON файл, который ищет программа
-    with open("data/transactions.json", "w", encoding="utf-8") as f:
-        json.dump(fake_transactions, f, ensure_ascii=False)
-
-    # Если программа тестирует CSV, можно создать и его
-    with open("data/transactions.csv", "w", encoding="utf-8") as f:
-        f.write("date,description,state\n01.01.2024,Test,EXECUTED\n")
-
-    yield  # Ждем, пока выполнятся тесты
-
-    # Убираем за собой (удаляем папку data, чтобы не мусорить в проекте)
-    if os.path.exists("data"):
-        shutil.rmtree("data")
+def mock_load_transactions(monkeypatch):
+    """Автоматически подменяем загрузку файлов фейковыми данными."""
+    monkeypatch.setattr("main.load_transactions", lambda _: FAKE_TRANSACTIONS)
 
 
 def test_main_success_flow(monkeypatch, capsys):
     """Тестируем успешный сценарий прохода по меню."""
+    # 1 - JSON, EXECUTED - статус, нет - сортировка, нет - рубли, нет - поиск
     inputs = iter(["1", "EXECUTED", "нет", "нет", "нет"])
     monkeypatch.setattr('builtins.input', lambda _="": next(inputs))
 
@@ -55,11 +35,14 @@ def test_main_success_flow(monkeypatch, capsys):
 
     assert "Привет! Добро пожаловать" in captured.out
     assert "Для обработки выбран JSON-файл" in captured.out
-    assert "Распечатываю итоговый список транзакций" in captured.out
+    assert "Всего банковских операций в выборке: 1" in captured.out
+    # Проверяем, что вывод отформатирован верно (есть маска)
+    assert "Сумма: 1000 руб." in captured.out
 
 
 def test_main_invalid_status(monkeypatch, capsys):
     """Тестируем защиту от неверного ввода статуса."""
+    # Вводим неверный статус "test", потом правильный "CANCELED"
     inputs = iter(["1", "test", "CANCELED", "нет", "нет", "нет"])
     monkeypatch.setattr('builtins.input', lambda _="": next(inputs))
 
@@ -71,7 +54,8 @@ def test_main_invalid_status(monkeypatch, capsys):
 
 
 def test_main_sorting_and_rub_filter(monkeypatch, capsys):
-    """Тестируем ветки с сортировкой и фильтрацией по рублям."""
+    """Тестируем сортировку и фильтрацию по рублям."""
+    # Сортировать (да) -> по убыванию -> Только рубли (да)
     inputs = iter(["1", "EXECUTED", "да", "по убыванию", "да", "нет"])
     monkeypatch.setattr('builtins.input', lambda _="": next(inputs))
 
@@ -79,6 +63,8 @@ def test_main_sorting_and_rub_filter(monkeypatch, capsys):
     captured = capsys.readouterr()
 
     assert "Распечатываю итоговый список транзакций" in captured.out
+    # Так как у нас только 1 RUB транзакция, выведется 1
+    assert "Всего банковских операций в выборке: 1" in captured.out
 
 
 def test_main_invalid_menu(monkeypatch, capsys):
@@ -90,4 +76,3 @@ def test_main_invalid_menu(monkeypatch, capsys):
     captured = capsys.readouterr()
 
     assert "Неверный пункт меню." in captured.out
-

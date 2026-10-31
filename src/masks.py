@@ -5,7 +5,6 @@
 from src.logger import setup_logger
 
 logger = setup_logger("masks")
-git status
 
 
 def get_mask_card_number(card_number: str) -> str:

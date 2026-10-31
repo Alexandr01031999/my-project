@@ -1,3 +1,7 @@
+import pytest
+
+from main import main
+
 # Фейковые данные для тестов
 FAKE_TRANSACTIONS = [
     {
